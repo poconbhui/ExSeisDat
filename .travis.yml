@@ -1,0 +1,36 @@
+language: cpp
+
+compiler:
+    - gcc
+
+before_install:
+    - sudo apt-get install mpich
+    - sudo apt-get install fftw3 fftw3-dev
+    - sudo apt-get install doxygen
+    - sudo apt-get install cmake
+
+before_script:
+    - mkdir ${TRAVIS_BUILD_DIR}/build
+    - cd ${TRAVIS_BUILD_DIR}/build
+    - cmake -DEXSEISDAT_BUILD_TESTS=OFF ${TRAVIS_BUILD_DIR} ..
+    - cd ${TRAVIS_BUILD_DIR}
+
+script: make -C ${TRAVIS_BUILD_DIR}/build doc
+
+deploy:
+    provider: script
+    on:
+        branch: devel
+    skip-cleanup: true
+    script:
+        git clone --depth=1 --branch=gh-pages
+            "https://${GITHUB_ACCESS_TOKEN}@github.com/${TRAVIS_REPO_SLUG}.git"
+            "${TRAVIS_BUILD_DIR}/gh-pages"
+            1>/dev/null 2>/dev/null
+        && cd ${TRAVIS_BUILD_DIR}/gh-pages
+        && mkdir -p docs
+        && rm -rf docs/${TRAVIS_BRANCH}
+        && cp -r ${TRAVIS_BUILD_DIR}/build/doc/html docs/${TRAVIS_BRANCH}
+        && git add --no-ignore-removal docs/${TRAVIS_BRANCH}
+        && git commit -m "Travis CI doc commit"
+        && git push --force
